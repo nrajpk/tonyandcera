@@ -367,17 +367,22 @@ export default function App() {
       </button>
 
       {/* ---- Nav ---- */}
-      <nav className={`nav ${scrolled ? 'scrolled' : ''}`}>
-        <div className="monogram text-base md:text-lg">C <span className="fs-10">&amp;</span> T</div>
-        <div className="hidden md:flex items-center" style={{ gap: '2.4rem' }}>
-          <span className="nav-link" onClick={() => scrollToId('couple')}>The Couple</span>
-          <span className="nav-link" onClick={() => scrollToId('ceremonies')}>Ceremonies</span>
-          <a className="nav-link" href="/invitation.pdf" download>Invitation</a>
-      
-          <span className="nav-link" onClick={() => scrollToId('blessings')}>Wishes</span>
-        </div>
-        <button className="btn btn-gold" onClick={() => scrollToId('rsvp')}>RSVP</button>
-      </nav>
+<nav className={`nav ${scrolled ? 'scrolled' : ''}`}>
+  <div className="monogram text-base md:text-lg">C <span className="fs-10">&amp;</span> T</div>
+  
+  {/* Header middle area: Contains only The Couple, Ceremonies, and Wishes */}
+  <div className="hidden md:flex items-center" style={{ gap: '2.4rem' }}>
+    <span className="nav-link" onClick={() => scrollToId('couple')}>The Couple</span>
+    <span className="nav-link" onClick={() => scrollToId('ceremonies')}>Ceremonies</span>
+    <span className="nav-link" onClick={() => scrollToId('blessings')}>Wishes</span>
+  </div>
+  
+  {/* Replaced gold RSVP button with Invitation download (keeps button styling) */}
+  <a className="btn btn-gold" href="/invitation.pdf" download style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
+    Invitation
+  </a>
+</nav>
+
 
       {/* ---- Hero ---- */}
       <section className="hero">
