@@ -373,7 +373,7 @@ export default function App() {
           <span className="nav-link" onClick={() => scrollToId('couple')}>The Couple</span>
           <span className="nav-link" onClick={() => scrollToId('ceremonies')}>Ceremonies</span>
           <a className="nav-link" href="/invitation.pdf" download>Invitation</a>
-      /*     <span className="nav-link" onClick={() => scrollToId('rsvp')}>RSVP</span> */
+      
           <span className="nav-link" onClick={() => scrollToId('blessings')}>Wishes</span>
         </div>
         <button className="btn btn-gold" onClick={() => scrollToId('rsvp')}>RSVP</button>
