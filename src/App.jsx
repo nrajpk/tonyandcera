@@ -608,8 +608,8 @@ export default function App() {
           <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: '3.5rem', alignItems: 'start' }}>
             {/* Form */}
             <div className="reveal">
-              <p className="eyebrow">For them to treasure</p>
-              <h2 className="s-title" style={{ fontSize: 'clamp(1.7rem,5vw,2.6rem)', marginTop: '1rem' }}>To the beautiful couple</h2>
+              <p className="eyebrow">To the beautiful couple-to-be</p>
+              <h2 className="s-title" style={{ fontSize: 'clamp(1.7rem,5vw,2.6rem)', marginTop: '1rem' }}>For them to treasure</h2>
               <div className="hairline" style={{ width: '54px', margin: '1.4rem 0' }} />
               <p className="f-cormorant" style={{ fontSize: '1.1rem', lineHeight: 1.65, color: 'var(--body)', marginBottom: '2rem' }}>
                 Near or far, leave a heartfelt wish below.
