@@ -1,114 +1,59 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  ArrowUpRight,
-  CalendarDays,
-  CheckCircle,
-  ChevronDown,
-  Clock,
-  Copy,
-  Download,
-  Heart,
+  Volume2,
+  VolumeX,
   MapPin,
-  Music,
+  Clock,
   Phone,
   Sparkles,
+  ChevronDown,
+  Send,
+  CheckCircle,
+  Copy,
+  Heart,
+  ArrowUpRight,
+  Download,
   X,
 } from 'lucide-react';
 
+// Betrothal Ceremony — Saturday, October 10, 2026, 11:00 AM IST
 const TARGET_DATE = new Date('2026-10-10T11:00:00+05:30');
 
-const INVITATION_FILE = '/invitation.pdf';
-const MUSIC_SRC = '';
-
-const PHONE_NUMBER = '+919847400241';
-const DISPLAY_PHONE = '+91 98474 00241';
-
-const CEREMONY_MAP =
-  "https://maps.google.com/?q=St.+Mary's+Forane+Church,+Kanjoor";
-
-const RECEPTION_MAP =
-  'https://maps.google.com/?q=O.L.D.+Church+Parish+Hall,+Kaippattoor';
-
-const events = [
-  {
-    label: 'Betrothal Ceremony',
-    time: '11:00 AM',
-    venue: "St. Mary's Forane Church",
-    place: 'Kanjoor, Kerala',
-    map: CEREMONY_MAP,
-    note: 'The sacred ceremony where the families gather in prayer and blessing.',
-  },
-  {
-    label: 'Reception',
-    time: '12:30 PM onwards',
-    venue: 'O.L.D. Church Parish Hall',
-    place: 'Kaippattoor, Kerala',
-    map: RECEPTION_MAP,
-    note: 'A warm family gathering with lunch, fellowship, and shared joy.',
-  },
-];
-
-const blessingsInitial = [
-  {
-    name: 'Saji & Sheela',
-    text: 'May God shower you both with boundless grace and love on this beautiful journey.',
-    date: 'Just now',
-  },
-  {
-    name: 'Anto & Mini',
-    text: 'Welcoming our dear Cera into our family with all our love.',
-    date: '5 minutes ago',
-  },
-  {
-    name: 'Fr. Francis SJ',
-    text: 'Prayers and blessings for a holy and joyful union in Christ.',
-    date: '1 hour ago',
-  },
-];
-
 export default function App() {
-  const [scrolled, setScrolled] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [timeLeft, setTimeLeft] = useState({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-  });
+  const [scrolled, setScrolled] = useState(false);
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
+  // RSVP
+  const [rsvpName, setRsvpName] = useState('');
+  const [rsvpStatus, setRsvpStatus] = useState('attending');
+  const [rsvpGuests, setRsvpGuests] = useState('1');
+  const [rsvpNote, setRsvpNote] = useState('');
+  const [isRsvpSubmitting, setIsRsvpSubmitting] = useState(false);
+
+  // Blessings
   const [blessingName, setBlessingName] = useState('');
   const [blessingMessage, setBlessingMessage] = useState('');
-  const [blessingsList, setBlessingsList] = useState(blessingsInitial);
+  const [blessingsList, setBlessingsList] = useState([
+    { name: 'Saji & Sheela', text: 'May God shower you both with boundless grace and love on this beautiful journey.', date: 'Just now' },
+    { name: 'Anto & Mini', text: 'Welcoming our dear Cera into our family with all our love.', date: '5 minutes ago' },
+    { name: 'Fr. Francis SJ', text: 'Prayers and blessings for a holy and joyful union in Christ.', date: '1 hour ago' },
+  ]);
 
   const [showCopied, setShowCopied] = useState(false);
-  const [toast, setToast] = useState({
-    show: false,
-    title: '',
-    message: '',
-  });
+  const [toast, setToast] = useState({ show: false, title: '', message: '' });
 
   const audioRef = useRef(null);
   const toastTimer = useRef(null);
 
-  const showToast = useCallback((title, message) => {
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-
-    setToast({ show: true, title, message });
-
-    toastTimer.current = setTimeout(() => {
-      setToast((current) => ({ ...current, show: false }));
-    }, 3600);
-  }, []);
-
+  // ---- Countdown ----
   useEffect(() => {
-    const updateCountdown = () => {
-      const diff = TARGET_DATE.getTime() - Date.now();
-
+    const tick = () => {
+      const diff = +TARGET_DATE - Date.now();
       if (diff <= 0) {
         setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
         return;
       }
-
       setTimeLeft({
         days: Math.floor(diff / 86400000),
         hours: Math.floor((diff / 3600000) % 24),
@@ -116,1405 +61,681 @@ export default function App() {
         seconds: Math.floor((diff / 1000) % 60),
       });
     };
-
-    updateCountdown();
-    const intervalId = window.setInterval(updateCountdown, 1000);
-
-    return () => window.clearInterval(intervalId);
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
   }, []);
 
+  // ---- Nav scroll state ----
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 40);
-
-    handleScroll();
-    window.addEventListener('scroll', handleScroll, { passive: true });
-
-    return () => window.removeEventListener('scroll', handleScroll);
+    const onScroll = () => setScrolled(window.scrollY > 60);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // ---- Scroll-reveal ----
   useEffect(() => {
-    const revealItems = document.querySelectorAll('.reveal');
-
-    const observer = new IntersectionObserver(
+    const els = document.querySelectorAll('.reveal');
+    const io = new IntersectionObserver(
       (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-
-          entry.target.classList.add('reveal-in');
-          observer.unobserve(entry.target);
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add('reveal-in');
+            io.unobserve(e.target);
+          }
         });
       },
       { threshold: 0.12 }
     );
-
-    revealItems.forEach((item) => observer.observe(item));
-
-    return () => observer.disconnect();
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
   }, []);
 
+  // ---- Audio (respects browser autoplay policy) ----
   useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = 0.32;
+    if (audioRef.current) audioRef.current.volume = 0.35;
   }, []);
 
-  const scrollToId = (id) => {
-    const section = document.getElementById(id);
-    if (!section) return;
-
-    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  const toggleMusic = () => {
-    if (!MUSIC_SRC || !audioRef.current) {
-      showToast('Music not added', 'Add a local audio file and set MUSIC_SRC to enable background music.');
-      return;
-    }
-
+  const togglePlay = () => {
+    const a = audioRef.current;
+    if (!a) return;
     if (isPlaying) {
-      audioRef.current.pause();
+      a.pause();
       setIsPlaying(false);
-      return;
+    } else {
+      a.play()
+        .then(() => setIsPlaying(true))
+        .catch(() => setIsPlaying(false)); // blocked by policy — fail quietly
     }
-
-    audioRef.current
-      .play()
-      .then(() => setIsPlaying(true))
-      .catch(() => {
-        setIsPlaying(false);
-        showToast('Music blocked', 'Tap again after the page is active, or check the audio file path.');
-      });
   };
 
-  const copyPhoneNumber = async () => {
-    try {
-      await navigator.clipboard.writeText(PHONE_NUMBER);
-    } catch {
-      const input = document.createElement('textarea');
-      input.value = PHONE_NUMBER;
-      input.setAttribute('readonly', '');
-      input.style.position = 'fixed';
-      input.style.opacity = '0';
+  const showToast = useCallback((title, message) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ show: true, title, message });
+    toastTimer.current = setTimeout(() => setToast((t) => ({ ...t, show: false })), 4200);
+  }, []);
 
-      document.body.appendChild(input);
-      input.select();
-
-      try {
-        document.execCommand('copy');
-      } catch {
-        // Ignore older browser copy failure.
-      }
-
-      document.body.removeChild(input);
-    }
-
-    setShowCopied(true);
-    showToast('Phone copied', `${DISPLAY_PHONE} copied to clipboard.`);
-
-    window.setTimeout(() => setShowCopied(false), 1800);
+  const handleRsvpSubmit = () => {
+    if (!rsvpName.trim() || isRsvpSubmitting) return;
+    setIsRsvpSubmitting(true);
+    setTimeout(() => {
+      setIsRsvpSubmitting(false);
+      const name = rsvpName.trim();
+      showToast(
+        rsvpStatus === 'attending' ? 'Reservation confirmed' : 'Response received',
+        rsvpStatus === 'attending'
+          ? `Thank you, ${name}. We can't wait to celebrate with you.`
+          : `Thank you, ${name}. You'll be dearly missed — and held in our prayers.`
+      );
+      setRsvpName('');
+      setRsvpNote('');
+    }, 1600);
   };
 
   const handleBlessingSubmit = () => {
-    const name = blessingName.trim();
-    const message = blessingMessage.trim();
-
-    if (!name || !message) {
-      showToast('Missing details', 'Please add your name and blessing before posting.');
-      return;
-    }
-
-    setBlessingsList((current) => [
-      {
-        name,
-        text: message,
-        date: 'Just now',
-      },
-      ...current,
+    if (!blessingName.trim() || !blessingMessage.trim()) return;
+    setBlessingsList((list) => [
+      { name: blessingName.trim(), text: blessingMessage.trim(), date: 'Just now' },
+      ...list,
     ]);
-
+    showToast('Blessing posted', 'Your wishes now live on Cera & Tony\u2019s board.');
     setBlessingName('');
     setBlessingMessage('');
-
-    showToast('Blessing added', 'Your message is visible on this page for this visit.');
   };
+
+  const copyPhoneNumber = async () => {
+    const number = '+919847400241';
+    try {
+      await navigator.clipboard.writeText(number);
+    } catch {
+      const el = document.createElement('textarea');
+      el.value = number;
+      el.style.position = 'fixed';
+      el.style.opacity = '0';
+      document.body.appendChild(el);
+      el.select();
+      try { document.execCommand('copy'); } catch { /* ignore */ }
+      document.body.removeChild(el);
+    }
+    setShowCopied(true);
+    setTimeout(() => setShowCopied(false), 2000);
+  };
+
+  const scrollToId = (id) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const ceremonies = [
+    {
+      idx: 'I',
+      tag: 'Morning Service',
+      title: 'Betrothal Ceremony',
+      time: '11:00 AM',
+      venue: "St. Mary's Forane Church",
+      place: 'Kanjoor, Kerala',
+      note: 'A historic holy site where two families gather in prayer, and promises are first spoken aloud.',
+      map: "https://maps.google.com/?q=St.+Mary's+Forane+Church,+Kanjoor",
+    },
+    {
+      idx: 'II',
+      tag: 'Afternoon Celebration',
+      title: 'The Wedding Feast',
+      time: '12:30 PM',
+      venue: 'O.L.D. Church Parish Hall',
+      place: 'Kaippattoor, Kerala',
+      note: 'A grand banquet of food, family and quiet music — companionship celebrated long into the day.',
+      map: 'https://maps.google.com/?q=O.L.D.+Church+Parish+Hall,+Kaippattoor',
+    },
+  ];
 
   return (
     <div className="page">
-      {MUSIC_SRC ? <audio ref={audioRef} src={MUSIC_SRC} loop preload="none" /> : null}
+      <audio ref={audioRef} src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" loop preload="auto" />
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Montserrat:wght@300;400;500;600&display=swap');
-
-        :root {
-          --cream: #fcfaf6;
-          --cream-soft: #f7f0e6;
-          --paper: #fffdf9;
-          --ink: #2c2926;
-          --body: #5d554d;
-          --muted: #95887b;
-          --gold: #b8955e;
-          --gold-soft: rgba(184, 149, 94, 0.22);
-          --gold-line: rgba(184, 149, 94, 0.28);
-          --shadow: 0 24px 60px -46px rgba(44, 41, 38, 0.55);
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        html {
-          scroll-behavior: smooth;
-        }
-
-        body {
-          margin: 0;
-        }
-
-        .page {
-          min-height: 100vh;
-          overflow-x: hidden;
-          background:
-            radial-gradient(circle at top, rgba(255,255,255,0.96), rgba(252,250,246,0.94) 42%, rgba(247,240,230,0.55)),
-            var(--cream);
-          color: var(--body);
-          font-family: 'Montserrat', system-ui, sans-serif;
-          -webkit-font-smoothing: antialiased;
-          text-rendering: optimizeLegibility;
-        }
-
-        ::selection {
-          background: var(--gold);
-          color: #fff;
-        }
-
-        a {
-          color: inherit;
-        }
-
-        .font-display {
-          font-family: 'Cinzel', Georgia, serif;
-        }
-
-        .font-serif {
-          font-family: 'Cormorant Garamond', Georgia, serif;
-        }
-
-        .ink {
-          color: var(--ink);
-        }
-
-        .muted {
-          color: var(--muted);
-        }
-
-        .gold {
-          color: var(--gold);
-        }
-
-        .section {
-          padding: clamp(4rem, 9vw, 7rem) 1.25rem;
-        }
-
-        .container {
-          width: min(100%, 1040px);
-          margin: 0 auto;
-        }
-
-        .container-narrow {
-          width: min(100%, 760px);
-          margin: 0 auto;
-        }
-
-        .eyebrow {
-          margin: 0;
-          color: var(--gold);
-          font-family: 'Cinzel', Georgia, serif;
-          font-size: 0.68rem;
-          font-weight: 500;
-          letter-spacing: 0.28em;
-          text-transform: uppercase;
-        }
-
-        .section-title {
-          margin: 0.85rem 0 0;
-          color: var(--ink);
-          font-family: 'Cinzel', Georgia, serif;
-          font-size: clamp(1.75rem, 5vw, 2.75rem);
-          font-weight: 500;
-          letter-spacing: 0.08em;
-          line-height: 1.18;
-        }
-
-        .section-copy {
-          margin: 1rem auto 0;
-          max-width: 620px;
-          color: var(--body);
-          font-family: 'Cormorant Garamond', Georgia, serif;
-          font-size: 1.15rem;
-          line-height: 1.65;
-        }
-
-        .rule {
-          width: 54px;
-          height: 1px;
-          margin: 1.2rem auto 0;
-          background: var(--gold);
-        }
-
-        .card {
-          background: rgba(255, 253, 249, 0.84);
-          border: 1px solid var(--gold-line);
-          box-shadow: var(--shadow);
-        }
-
-        .soft-card {
-          background: rgba(255, 253, 249, 0.72);
-          border: 1px solid var(--gold-line);
-        }
-
-        .nav {
-          position: fixed;
-          top: 0;
-          left: 0;
-          z-index: 40;
-          width: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 1rem;
-          padding: 1rem 1.1rem;
-          transition: background 0.35s ease, border-color 0.35s ease, padding 0.35s ease;
-        }
-
-        .nav.scrolled {
-          padding: 0.72rem 1.1rem;
-          background: rgba(252, 250, 246, 0.9);
-          border-bottom: 1px solid var(--gold-line);
-          backdrop-filter: blur(14px);
-        }
-
-        .brand {
-          color: var(--ink);
-          font-family: 'Cinzel', Georgia, serif;
-          font-size: 0.9rem;
-          font-weight: 600;
-          letter-spacing: 0.24em;
-          white-space: nowrap;
-        }
-
-        .nav-links {
-          display: none;
-          align-items: center;
-          gap: 1.7rem;
-        }
-
-        .nav-link {
-          appearance: none;
-          padding: 0;
-          background: transparent;
-          border: 0;
-          color: var(--body);
-          cursor: pointer;
-          font-family: 'Montserrat', system-ui, sans-serif;
-          font-size: 0.68rem;
-          font-weight: 500;
-          letter-spacing: 0.18em;
-          text-transform: uppercase;
-          transition: color 0.25s ease;
-        }
-
-        .nav-link:hover {
-          color: var(--gold);
-        }
-
-        .button {
-          min-height: 46px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 0.55rem;
-          padding: 0.82rem 1.15rem;
-          border: 1px solid transparent;
-          border-radius: 999px;
-          cursor: pointer;
-          font-family: 'Montserrat', system-ui, sans-serif;
-          font-size: 0.72rem;
-          font-weight: 600;
-          letter-spacing: 0.14em;
-          line-height: 1;
-          text-decoration: none;
-          text-transform: uppercase;
-          transition: transform 0.25s ease, background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
-        }
-
-        .button:hover {
-          transform: translateY(-1px);
-        }
-
-        .button-primary {
-          background: var(--ink);
-          color: #fff;
-        }
-
-        .button-primary:hover {
-          background: #171513;
-        }
-
-        .button-secondary {
-          background: rgba(255,255,255,0.62);
-          border-color: var(--gold-line);
-          color: var(--ink);
-        }
-
-        .button-secondary:hover {
-          border-color: var(--gold);
-          color: var(--gold);
-        }
-
-        .button-quiet {
-          min-height: 42px;
-          padding: 0.72rem 1rem;
-          background: rgba(255,255,255,0.56);
-          border-color: var(--gold-line);
-          color: var(--ink);
-          font-size: 0.66rem;
-        }
-
-        .music-button {
-          position: fixed;
-          right: 1rem;
-          bottom: 1rem;
-          z-index: 45;
-          width: 48px;
-          height: 48px;
-          padding: 0;
-          border-radius: 999px;
-          background: rgba(255,253,249,0.9);
-          border: 1px solid var(--gold-line);
-          color: var(--gold);
-          box-shadow: var(--shadow);
-        }
-
-        .music-button[aria-disabled='true'] {
-          color: var(--muted);
-          cursor: help;
-        }
-
-        .hero {
-          position: relative;
-          min-height: auto;
-          padding: 6.2rem 1.25rem 3.2rem;
-          text-align: center;
-        }
-
-        .hero::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          background-image:
-            linear-gradient(rgba(184,149,94,0.055) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(184,149,94,0.055) 1px, transparent 1px);
-          background-size: 34px 34px;
-          mask-image: radial-gradient(circle at 50% 34%, #000, transparent 72%);
-          -webkit-mask-image: radial-gradient(circle at 50% 34%, #000, transparent 72%);
-        }
-
-        .hero-inner {
-          position: relative;
-          z-index: 1;
-          width: min(100%, 780px);
-          margin: 0 auto;
-        }
-
-        .verse {
-          margin: 0 auto 1.15rem;
-          max-width: 560px;
-          color: var(--body);
-          font-family: 'Cormorant Garamond', Georgia, serif;
-          font-size: clamp(1rem, 3.4vw, 1.28rem);
-          font-style: italic;
-          line-height: 1.45;
-        }
-
-        .verse-ref {
-          display: block;
-          margin-top: 0.45rem;
-          color: var(--muted);
-          font-family: 'Montserrat', system-ui, sans-serif;
-          font-size: 0.58rem;
-          font-style: normal;
-          letter-spacing: 0.2em;
-          text-transform: uppercase;
-        }
-
-        .names {
-          margin: 1.1rem 0 0;
-          color: var(--ink);
-          font-family: 'Cinzel', Georgia, serif;
-          font-size: clamp(3.15rem, 16vw, 7.8rem);
-          font-weight: 500;
-          letter-spacing: 0.08em;
-          line-height: 0.94;
-        }
-
-        .ampersand {
-          display: block;
-          margin: 0.35rem 0;
-          color: var(--gold);
-          font-family: 'Cormorant Garamond', Georgia, serif;
-          font-size: clamp(1.65rem, 7vw, 3rem);
-          font-style: italic;
-          letter-spacing: 0.02em;
-          line-height: 1;
-        }
-
-        .hero-summary {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 0.7rem;
-          margin: 1.65rem auto 0;
-          max-width: 620px;
-        }
-
-        .summary-item {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 0.6rem;
-          min-height: 44px;
-          padding: 0.7rem 0.9rem;
-          background: rgba(255,255,255,0.58);
-          border: 1px solid var(--gold-line);
-          color: var(--ink);
-          font-size: 0.78rem;
-          font-weight: 500;
-          letter-spacing: 0.04em;
-        }
-
-        .hero-actions {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 0.8rem;
-          margin: 1.35rem auto 0;
-          max-width: 440px;
-        }
-
-        .invited-by {
-          margin: 1.45rem auto 0;
-          max-width: 560px;
-          color: var(--body);
-          font-family: 'Cormorant Garamond', Georgia, serif;
-          font-size: 1.08rem;
-          line-height: 1.55;
-        }
-
-        .scroll-cue {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.4rem;
-          margin-top: 1.6rem;
-          padding: 0.25rem 0;
-          background: none;
-          border: 0;
-          color: var(--muted);
-          cursor: pointer;
-          font-size: 0.62rem;
-          letter-spacing: 0.18em;
-          text-transform: uppercase;
-        }
-
-        .countdown {
-          padding: 2.6rem 1.25rem;
-          background: rgba(247, 240, 230, 0.72);
-          border-top: 1px solid var(--gold-line);
-          border-bottom: 1px solid var(--gold-line);
-        }
-
-        .countdown-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 0.55rem;
-          margin-top: 1.45rem;
-        }
-
-        .countdown-box {
-          padding: 1rem 0.35rem;
-          background: var(--paper);
-          border: 1px solid var(--gold-line);
-          text-align: center;
-        }
-
-        .countdown-number {
-          display: block;
-          color: var(--ink);
-          font-family: 'Cinzel', Georgia, serif;
-          font-size: clamp(1.55rem, 7vw, 2.6rem);
-          font-weight: 500;
-          line-height: 1;
-        }
-
-        .countdown-label {
-          display: block;
-          margin-top: 0.45rem;
-          color: var(--muted);
-          font-size: 0.56rem;
-          font-weight: 500;
-          letter-spacing: 0.16em;
-          text-transform: uppercase;
-        }
-
-        .family-grid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 1rem;
-          margin-top: 2rem;
-        }
-
-        .family-card {
-          padding: clamp(1.4rem, 5vw, 2rem);
-          text-align: center;
-        }
-
-        .family-role {
-          display: block;
-          color: var(--gold);
-          font-family: 'Cormorant Garamond', Georgia, serif;
-          font-size: 1.2rem;
-          font-style: italic;
-        }
-
-        .family-name {
-          margin: 0.35rem 0 0;
-          color: var(--ink);
-          font-family: 'Cinzel', Georgia, serif;
-          font-size: 1.65rem;
-          font-weight: 500;
-          letter-spacing: 0.12em;
-        }
-
-        .family-line {
-          margin: 0.65rem 0 0;
-          color: var(--muted);
-          font-size: 0.68rem;
-          letter-spacing: 0.14em;
-          line-height: 1.7;
-          text-transform: uppercase;
-        }
-
-        .ancestry {
-          margin-top: 1.15rem;
-          padding-top: 1.15rem;
-          border-top: 1px solid var(--gold-line);
-          color: var(--body);
-          font-family: 'Cormorant Garamond', Georgia, serif;
-          font-size: 1rem;
-          line-height: 1.5;
-        }
-
-        .events-grid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 1rem;
-          margin-top: 2rem;
-        }
-
-        .event-card {
-          padding: clamp(1.35rem, 5vw, 2rem);
-        }
-
-        .event-top {
-          display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
-          gap: 1rem;
-        }
-
-        .event-label {
-          margin: 0;
-          color: var(--ink);
-          font-family: 'Cinzel', Georgia, serif;
-          font-size: 1.28rem;
-          font-weight: 500;
-          letter-spacing: 0.06em;
-        }
-
-        .event-time {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.4rem;
-          color: var(--gold);
-          font-family: 'Cinzel', Georgia, serif;
-          font-size: 0.95rem;
-          white-space: nowrap;
-        }
-
-        .venue {
-          margin: 1.1rem 0 0;
-          color: var(--ink);
-          font-weight: 600;
-          line-height: 1.45;
-        }
-
-        .place {
-          margin: 0.25rem 0 0;
-          color: var(--muted);
-          font-size: 0.72rem;
-          letter-spacing: 0.13em;
-          text-transform: uppercase;
-        }
-
-        .event-note {
-          margin: 0.8rem 0 1.1rem;
-          color: var(--body);
-          font-family: 'Cormorant Garamond', Georgia, serif;
-          font-size: 1.06rem;
-          line-height: 1.55;
-        }
-
-        .text-link {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.45rem;
-          color: var(--gold);
-          font-size: 0.68rem;
-          font-weight: 600;
-          letter-spacing: 0.14em;
-          text-decoration: none;
-          text-transform: uppercase;
-        }
-
-        .directions-panel {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 1rem;
-          margin-top: 2rem;
-        }
-
-        .contact-box {
-          padding: clamp(1.35rem, 5vw, 1.9rem);
-          text-align: center;
-        }
-
-        .phone-row {
-          display: inline-flex;
-          flex-wrap: wrap;
-          align-items: center;
-          justify-content: center;
-          gap: 0.85rem;
-          margin-top: 1rem;
-        }
-
-        .copy-button {
-          min-height: 36px;
-          padding: 0.55rem 0.8rem;
-          background: transparent;
-          border: 1px solid var(--gold-line);
-          border-radius: 999px;
-          color: var(--gold);
-          cursor: pointer;
-          font-size: 0.62rem;
-          font-weight: 600;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-        }
-
-        .blessings-layout {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 1rem;
-          margin-top: 2rem;
-        }
-
-        .form-card,
-        .blessings-card {
-          padding: clamp(1.35rem, 5vw, 1.9rem);
-        }
-
-        .field {
-          display: block;
-          margin-bottom: 1rem;
-        }
-
-        .field span {
-          display: block;
-          margin-bottom: 0.45rem;
-          color: var(--gold);
-          font-size: 0.62rem;
-          font-weight: 600;
-          letter-spacing: 0.16em;
-          text-transform: uppercase;
-        }
-
-        .field input,
-        .field textarea {
-          width: 100%;
-          padding: 0.85rem 0;
-          background: transparent;
-          border: 0;
-          border-bottom: 1px solid var(--gold-line);
-          border-radius: 0;
-          color: var(--ink);
-          font: inherit;
-          font-size: 0.95rem;
-          outline: none;
-          resize: vertical;
-        }
-
-        .field input:focus,
-        .field textarea:focus {
-          border-bottom-color: var(--gold);
-        }
-
-        .guestbook-note {
-          margin: 0 0 1rem;
-          color: var(--muted);
-          font-size: 0.72rem;
-          line-height: 1.6;
-        }
-
-        .blessings-list {
-          display: flex;
-          flex-direction: column;
-          gap: 0.8rem;
-          max-height: 460px;
-          overflow-y: auto;
-          padding-right: 0.15rem;
-        }
-
-        .blessing {
-          position: relative;
-          padding: 1rem;
-          background: rgba(247,240,230,0.54);
-          border: 1px solid var(--gold-line);
-        }
-
-        .blessing-head {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 0.7rem;
-          margin-bottom: 0.45rem;
-        }
-
-        .blessing-name {
-          color: var(--gold);
-          font-family: 'Cinzel', Georgia, serif;
-          font-size: 0.78rem;
-          font-weight: 600;
-          letter-spacing: 0.08em;
-        }
-
-        .blessing-date {
-          color: var(--muted);
-          font-size: 0.62rem;
-        }
-
-        .blessing-text {
-          margin: 0;
-          color: var(--body);
-          font-family: 'Cormorant Garamond', Georgia, serif;
-          font-size: 1.04rem;
-          font-style: italic;
-          line-height: 1.55;
-        }
-
-        .support-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 0.75rem;
-          margin-top: 1.7rem;
-        }
-
-        .support-chip {
-          padding: 1rem 0.7rem;
-          background: rgba(255,253,249,0.68);
-          border: 1px solid var(--gold-line);
-          text-align: center;
-        }
-
-        .support-chip strong {
-          display: block;
-          color: var(--ink);
-          font-family: 'Cinzel', Georgia, serif;
-          font-size: 0.78rem;
-          font-weight: 500;
-          letter-spacing: 0.08em;
-          line-height: 1.45;
-          text-transform: uppercase;
-        }
-
-        .support-chip span {
-          display: block;
-          margin-top: 0.35rem;
-          color: var(--muted);
-          font-size: 0.58rem;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-        }
-
-        .footer {
-          padding: 3rem 1.25rem 4.4rem;
-          background: rgba(247,240,230,0.78);
-          border-top: 1px solid var(--gold-line);
-          text-align: center;
-        }
-
-        .footer-name {
-          margin: 0;
-          color: var(--ink);
-          font-family: 'Cinzel', Georgia, serif;
-          font-size: 1.55rem;
-          font-weight: 500;
-          letter-spacing: 0.16em;
-        }
-
-        .footer-links {
-          display: flex;
-          flex-wrap: wrap;
-          justify-content: center;
-          gap: 1rem;
-          margin: 1.25rem 0;
-        }
-
-        .copyright {
-          margin: 0;
-          color: var(--muted);
-          font-size: 0.58rem;
-          letter-spacing: 0.16em;
-          text-transform: uppercase;
-        }
-
-        .toast {
-          position: fixed;
-          left: 50%;
-          bottom: 1rem;
-          z-index: 60;
-          width: min(calc(100% - 2rem), 390px);
-          display: flex;
-          align-items: flex-start;
-          gap: 0.8rem;
-          padding: 1rem;
-          background: var(--paper);
-          border: 1px solid var(--gold-line);
-          border-top: 2px solid var(--gold);
-          box-shadow: var(--shadow);
-          opacity: 0;
-          pointer-events: none;
-          transform: translateX(-50%) translateY(130%);
-          transition: opacity 0.35s ease, transform 0.35s ease;
-        }
-
-        .toast.show {
-          opacity: 1;
-          pointer-events: auto;
-          transform: translateX(-50%) translateY(0);
-        }
-
-        .toast-title {
-          margin: 0;
-          color: var(--ink);
-          font-family: 'Cinzel', Georgia, serif;
-          font-size: 0.72rem;
-          font-weight: 600;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-        }
-
-        .toast-message {
-          margin: 0.25rem 0 0;
-          color: var(--body);
-          font-family: 'Cormorant Garamond', Georgia, serif;
-          font-size: 1rem;
-          line-height: 1.4;
-        }
-
-        .toast-close {
-          margin-left: auto;
-          padding: 0;
-          background: transparent;
-          border: 0;
-          color: var(--muted);
-          cursor: pointer;
-        }
-
-        .reveal {
-          opacity: 0;
-          transform: translateY(18px);
-          transition: opacity 0.7s ease, transform 0.7s ease;
-        }
-
-        .reveal.reveal-in {
-          opacity: 1;
-          transform: none;
-        }
-
-        @media (min-width: 640px) {
-          .hero {
-            min-height: 92vh;
-            display: flex;
-            align-items: center;
-            padding: 7rem 1.5rem 4.2rem;
-          }
-
-          .hero-summary {
-            grid-template-columns: repeat(2, 1fr);
-          }
-
-          .hero-actions {
-            grid-template-columns: 1fr 1fr;
-          }
-
-          .support-grid {
-            grid-template-columns: repeat(4, 1fr);
-          }
-        }
-
-        @media (min-width: 768px) {
-          .nav {
-            padding: 1.25rem 2rem;
-          }
-
-          .nav.scrolled {
-            padding: 0.85rem 2rem;
-          }
-
-          .nav-links {
-            display: flex;
-          }
-
-          .family-grid,
-          .events-grid,
-          .directions-panel,
-          .blessings-layout {
-            grid-template-columns: repeat(2, 1fr);
-          }
-
-          .countdown-grid {
-            gap: 1rem;
-          }
-
-          .countdown-box {
-            padding: 1.35rem 0.6rem;
-          }
-        }
-
-        @media (max-width: 380px) {
-          .button {
-            width: 100%;
-          }
-
-          .names {
-            font-size: 2.82rem;
-          }
-
-          .summary-item {
-            font-size: 0.72rem;
-          }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          *,
-          *::before,
-          *::after {
-            scroll-behavior: auto !important;
-            animation-duration: 0.01ms !important;
-            transition-duration: 0.01ms !important;
-          }
-
-          .reveal {
-            opacity: 1;
-            transform: none;
-          }
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Great+Vibes&family=Montserrat:wght@300;400;500&display=swap');
+
+        :root{
+          --cream:#FCFBF9; --cream2:#FAF6F0; --ink:#2A2725; --body:#544E4B;
+          --muted:#9C9189; --gold:#C5A880; --gold-d:#AD8A5C; --gold-soft:#E2D2B6;
+          --line:rgba(197,168,128,.30);
+        }
+        *{box-sizing:border-box;}
+        .page{background:var(--cream);color:var(--body);font-family:'Montserrat',sans-serif;
+          overflow-x:hidden;position:relative;-webkit-font-smoothing:antialiased;}
+        ::selection{background:var(--gold);color:#fff;}
+
+        .f-cinzel{font-family:'Cinzel',serif;}
+        .f-vibes{font-family:'Great Vibes',cursive;}
+        .f-cormorant{font-family:'Cormorant Garamond',serif;}
+        .f-mont{font-family:'Montserrat',sans-serif;}
+
+        .ink{color:var(--ink);} .body{color:var(--body);} .gold{color:var(--gold);} .muted{color:var(--muted);}
+        .gold-bg{background:var(--gold);} .cream2-bg{background:var(--cream2);} .white-bg{background:#fff;}
+        .border-line{border-color:var(--line)!important;}
+
+        .tr1{letter-spacing:.15em;} .tr2{letter-spacing:.25em;} .tr3{letter-spacing:.35em;} .tr4{letter-spacing:.45em;}
+        .fs-9{font-size:.5625rem;} .fs-10{font-size:.625rem;} .fs-11{font-size:.6875rem;} .fs-12{font-size:.75rem;}
+
+        .shadow-soft{box-shadow:0 34px 70px -46px rgba(42,39,37,.40);}
+        .shadow-softer{box-shadow:0 18px 44px -34px rgba(42,39,37,.32);}
+        .divider{height:1px;background:linear-gradient(to right,transparent,var(--gold),transparent);}
+        .hairline{height:1px;background:var(--gold-soft);}
+
+        /* ---- Nav ---- */
+        .nav{position:fixed;top:0;left:0;width:100%;z-index:40;display:flex;align-items:center;
+          justify-content:space-between;padding:1.6rem 2rem;transition:all .7s cubic-bezier(.16,1,.3,1);}
+        .nav.scrolled{background:rgba(252,251,249,.82);backdrop-filter:blur(12px);
+          border-bottom:1px solid var(--line);padding:1rem 2rem;}
+        .nav-link{position:relative;font-size:.7rem;letter-spacing:.24em;text-transform:uppercase;
+          color:var(--body);transition:color .5s ease;cursor:pointer;}
+        .nav-link::after{content:'';position:absolute;left:0;bottom:-6px;height:1px;width:0;
+          background:var(--gold);transition:width .5s cubic-bezier(.16,1,.3,1);}
+        .nav-link:hover{color:var(--gold-d);} .nav-link:hover::after{width:100%;}
+        .monogram{font-family:'Cinzel',serif;font-weight:500;letter-spacing:.3em;color:var(--ink);}
+
+        /* ---- Buttons ---- */
+        .btn{font-family:'Cinzel',serif;text-transform:uppercase;cursor:pointer;
+          transition:all .6s cubic-bezier(.16,1,.3,1);border:none;display:inline-flex;
+          align-items:center;justify-content:center;gap:.6rem;}
+        .btn-gold{background:var(--gold);color:#fff;letter-spacing:.22em;font-size:.7rem;padding:.7rem 1.7rem;}
+        .btn-gold:hover{background:var(--gold-d);transform:translateY(-2px);
+          box-shadow:0 22px 40px -26px rgba(173,138,92,.8);}
+        .btn-gold:disabled{opacity:.65;cursor:default;transform:none;box-shadow:none;}
+        .btn-block{width:100%;padding:1.15rem;letter-spacing:.28em;font-size:.72rem;}
+        .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--gold-d);
+          letter-spacing:.2em;font-size:.68rem;padding:1rem 1.4rem;}
+        .btn-ghost:hover{background:var(--cream2);border-color:var(--gold);transform:translateY(-2px);}
+
+        /* ---- Music control ---- */
+        .music-fab{position:fixed;right:1.75rem;bottom:1.75rem;z-index:50;width:3.4rem;height:3.4rem;
+          border-radius:9999px;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);
+          border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+          color:var(--gold-d);cursor:pointer;box-shadow:0 22px 44px -30px rgba(42,39,37,.55);
+          transition:all .55s cubic-bezier(.16,1,.3,1);}
+        .music-fab:hover{transform:scale(1.08) translateY(-2px);background:#fff;}
+        .fab-tip{position:absolute;right:4rem;white-space:nowrap;background:var(--ink);color:var(--gold-soft);
+          font-family:'Montserrat',sans-serif;font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;
+          padding:.45rem .8rem;border-radius:2px;opacity:0;transform:translateX(6px);
+          transition:all .4s ease;pointer-events:none;}
+        .music-fab:hover .fab-tip{opacity:1;transform:translateX(0);}
+
+        /* ---- Reveal & motion ---- */
+        .reveal{opacity:0;transform:translateY(30px);transition:opacity 1.1s ease,transform 1.1s cubic-bezier(.16,1,.3,1);}
+        .reveal.reveal-in{opacity:1;transform:none;}
+        @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+        .floaty{animation:floaty 10s ease-in-out infinite;}
+        @keyframes spin-slow{to{transform:rotate(360deg)}}
+        .spin-slow{animation:spin-slow 22s linear infinite;}
+        @keyframes nudge{0%,100%{transform:translateY(0);opacity:.45}50%{transform:translateY(9px);opacity:1}}
+        .nudge{animation:nudge 2.6s ease-in-out infinite;}
+
+        /* ---- Hero ---- */
+        .hero{position:relative;min-height:100vh;display:flex;flex-direction:column;
+          align-items:center;justify-content:center;text-align:center;padding:8rem 1.5rem 6rem;}
+        .hero-texture{position:absolute;inset:0;pointer-events:none;opacity:.5;
+          background-image:radial-gradient(rgba(197,168,128,.16) 1px,transparent 1px);
+          background-size:30px 30px;mask-image:radial-gradient(circle at 50% 42%,#000,transparent 72%);
+          -webkit-mask-image:radial-gradient(circle at 50% 42%,#000,transparent 72%);}
+        .name-display{font-family:'Cinzel',serif;color:var(--ink);font-weight:500;line-height:.95;
+          letter-spacing:.12em;}
+        .vert{writing-mode:vertical-rl;text-orientation:mixed;}
+
+        /* ---- Section primitives ---- */
+        .eyebrow{font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.34em;
+          text-transform:uppercase;color:var(--gold-d);}
+        .s-title{font-family:'Cinzel',serif;color:var(--ink);letter-spacing:.14em;font-weight:500;}
+        .rule{width:54px;height:1px;background:var(--gold);margin:1.4rem auto 0;}
+
+        /* ---- Couple ---- */
+        .person{background:var(--cream2);border:1px solid var(--line);padding:2.6rem 2rem;
+          transition:transform .8s cubic-bezier(.16,1,.3,1),box-shadow .8s;height:100%;}
+        .person:hover{transform:translateY(-6px);box-shadow:0 40px 70px -50px rgba(42,39,37,.4);}
+        .ancestry{background:rgba(255,255,255,.7);border:1px solid var(--line);}
+
+        /* ---- Ceremonies (split narrative) ---- */
+        .chapter{position:relative;background:#fff;border:1px solid var(--line);padding:3rem 2.4rem;
+          transition:transform .8s cubic-bezier(.16,1,.3,1),box-shadow .8s;height:100%;}
+        .chapter:hover{transform:translateY(-6px);box-shadow:0 40px 80px -54px rgba(42,39,37,.45);}
+        .chapter-num{font-family:'Cinzel',serif;font-size:4.5rem;line-height:1;color:var(--gold-soft);}
+        .map-link{display:inline-flex;align-items:center;gap:.55rem;font-family:'Montserrat',sans-serif;
+          font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold-d);
+          padding-bottom:4px;border-bottom:1px solid var(--line);transition:all .5s ease;}
+        .map-link:hover{color:var(--ink);border-color:var(--gold);}
+
+        /* ---- Forms: floating fields ---- */
+        .lux-field{position:relative;padding-top:1.15rem;margin-top:.4rem;}
+        .lux-field input,.lux-field textarea{width:100%;background:transparent;border:none;
+          border-bottom:1px solid var(--line);padding:.5rem 0;font-family:'Montserrat',sans-serif;
+          font-size:.9rem;letter-spacing:.03em;color:var(--ink);outline:none;resize:none;}
+        .lux-field label{position:absolute;left:0;top:1.55rem;font-family:'Montserrat',sans-serif;
+          font-size:.7rem;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);
+          pointer-events:none;transition:all .45s cubic-bezier(.2,.8,.2,1);}
+        .lux-field input:focus ~ label,.lux-field input:not(:placeholder-shown) ~ label,
+        .lux-field textarea:focus ~ label,.lux-field textarea:not(:placeholder-shown) ~ label{
+          top:0;font-size:.6rem;letter-spacing:.3em;color:var(--gold-d);}
+        .lux-underline{position:absolute;left:0;bottom:0;height:1px;width:0;background:var(--gold);
+          transition:width .55s cubic-bezier(.16,1,.3,1);}
+        .lux-field input:focus ~ .lux-underline,.lux-field textarea:focus ~ .lux-underline{width:100%;}
+
+        .field-label{font-family:'Montserrat',sans-serif;font-size:.6rem;letter-spacing:.3em;
+          text-transform:uppercase;color:var(--gold-d);}
+        .lux-select{width:100%;background:transparent;border:none;border-bottom:1px solid var(--line);
+          padding:.5rem 0;font-family:'Montserrat',sans-serif;font-size:.9rem;color:var(--ink);
+          outline:none;cursor:pointer;}
+
+        .radio-tile{border:1px solid var(--line);background:#fff;padding:1.1rem;text-align:center;
+          cursor:pointer;transition:all .55s cubic-bezier(.16,1,.3,1);
+          font-family:'Montserrat',sans-serif;font-size:.68rem;letter-spacing:.2em;
+          text-transform:uppercase;color:var(--muted);}
+        .radio-tile:hover{border-color:var(--gold-soft);}
+        .radio-tile.active{border-color:var(--gold);background:var(--cream2);color:var(--ink);}
+
+        /* ---- Guestbook ---- */
+        .blessing-scroll{max-height:520px;overflow-y:auto;padding-right:.4rem;}
+        .blessing-scroll::-webkit-scrollbar{width:5px;}
+        .blessing-scroll::-webkit-scrollbar-thumb{background:var(--gold-soft);border-radius:9999px;}
+        .blessing-card{position:relative;overflow:hidden;background:var(--cream2);
+          border:1px solid var(--line);padding:1.3rem 1.4rem;}
+
+        .family-chip{background:var(--cream2);border:1px solid var(--line);padding:1.2rem .8rem;
+          transition:transform .6s ease,box-shadow .6s;}
+        .family-chip:hover{transform:translateY(-4px);box-shadow:0 24px 44px -36px rgba(42,39,37,.4);}
+        .contact-pill{display:inline-flex;align-items:center;gap:1rem;background:var(--cream2);
+          border:1px solid var(--line);padding:1rem 1.6rem;border-radius:9999px;}
+
+        /* ---- Toast ---- */
+        .toast{position:fixed;left:50%;bottom:2.4rem;z-index:60;display:flex;gap:.9rem;
+          align-items:flex-start;min-width:300px;max-width:380px;background:#fff;
+          border:1px solid var(--line);border-top:2px solid var(--gold);padding:1.1rem 1.3rem;
+          box-shadow:0 34px 64px -32px rgba(42,39,37,.45);opacity:0;
+          transform:translateX(-50%) translateY(170%);
+          transition:transform .8s cubic-bezier(.16,1,.3,1),opacity .8s;}
+        .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+        @media (prefers-reduced-motion: reduce){
+          *{animation:none!important;transition-duration:.01ms!important;}
+          .reveal{opacity:1;transform:none;}
         }
       `}</style>
 
-      <button
-        className="button music-button"
-        type="button"
-        onClick={toggleMusic}
-        aria-label={MUSIC_SRC ? 'Toggle background music' : 'Background music not added'}
-        aria-disabled={!MUSIC_SRC}
-        title={MUSIC_SRC ? 'Toggle music' : 'Add a local audio file to enable music'}
-      >
-        <Music size={18} />
+      {/* ---- Music control ---- */}
+      <button className="music-fab" onClick={togglePlay} aria-label="Toggle background music">
+        <span className="fab-tip">{isPlaying ? 'Pause music' : 'Play music'}</span>
+        {isPlaying ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" style={{ color: 'var(--muted)' }} />}
       </button>
 
-      <nav className={`nav ${scrolled ? 'scrolled' : ''}`}>
-        <button className="brand" type="button" onClick={() => scrollToId('hero')}>
-          C &amp; T
-        </button>
+      {/* ---- Nav ---- */}
+<nav className={`nav ${scrolled ? 'scrolled' : ''}`}>
+  <div className="monogram text-base md:text-lg">C <span className="fs-10">&amp;</span> T</div>
+  
+  {/* Header middle area: Contains only The Couple, Ceremonies, and Wishes */}
+  <div className="hidden md:flex items-center" style={{ gap: '2.4rem' }}>
+    <span className="nav-link" onClick={() => scrollToId('couple')}>The Couple</span>
+    <span className="nav-link" onClick={() => scrollToId('ceremonies')}>Ceremonies</span>
+    <span className="nav-link" onClick={() => scrollToId('blessings')}>Wishes</span>
+  </div>
+  
+  {/* Replaced gold RSVP button with Invitation download (keeps button styling) */}
+  <a className="btn btn-gold" href="/invitation.pdf" download style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
+    Invitation
+  </a>
+</nav>
 
-        <div className="nav-links" aria-label="Page navigation">
-          <button className="nav-link" type="button" onClick={() => scrollToId('couple')}>
-            Families
-          </button>
-          <button className="nav-link" type="button" onClick={() => scrollToId('ceremony')}>
-            Ceremony
-          </button>
-          <button className="nav-link" type="button" onClick={() => scrollToId('directions')}>
-            Directions
-          </button>
-          <button className="nav-link" type="button" onClick={() => scrollToId('blessings')}>
-            Wishes
-          </button>
+
+      {/* ---- Hero ---- */}
+      <section className="hero">
+        <div className="hero-texture" />
+        <svg className="floaty" viewBox="0 0 100 100" fill="var(--gold)"
+          style={{ position: 'absolute', top: '12%', left: '6%', width: '120px', opacity: 0.14, mixBlendMode: 'multiply' }}>
+          <path d="M10,90 Q30,60 50,70 T90,20 Q70,40 50,30 T10,90 Z" />
+        </svg>
+        <svg className="floaty" viewBox="0 0 100 100" fill="var(--gold)"
+          style={{ position: 'absolute', bottom: '12%', right: '6%', width: '120px', opacity: 0.14, mixBlendMode: 'multiply', animationDelay: '3s' }}>
+          <path d="M10,90 Q30,60 50,70 T90,20 Q70,40 50,30 T10,90 Z" transform="rotate(180,50,50)" />
+        </svg>
+
+        <div className="relative z-10 reveal" style={{ maxWidth: '880px', width: '100%' }}>
+          <p className="eyebrow" style={{ marginBottom: '1.2rem' }}>Betrothal Invitation</p>
+          <p className="f-cormorant ink" style={{ fontStyle: 'italic', fontSize: 'clamp(1rem,2.6vw,1.35rem)', letterSpacing: '.02em', maxWidth: '520px', margin: '0 auto 2.4rem' }}>
+            “The Lord has done great things for us, and we are filled with joy.”
+            <span className="block muted f-mont fs-10 tr2" style={{ marginTop: '.8rem' }}>PSALM 126:3</span>
+          </p>
+
+          <div className="flex items-center justify-center" style={{ gap: '1.2rem', marginBottom: '2.4rem' }}>
+            <div style={{ height: '1px', width: '70px', background: 'linear-gradient(to right,transparent,var(--gold))' }} />
+            <Sparkles className="w-4 h-4 spin-slow" style={{ color: 'var(--gold)' }} />
+            <div style={{ height: '1px', width: '70px', background: 'linear-gradient(to left,transparent,var(--gold))' }} />
+          </div>
+
+          <h1 className="name-display" style={{ fontSize: 'clamp(3.4rem,13vw,8.5rem)' }}>CERA</h1>
+          <div className="f-vibes gold" style={{ fontSize: 'clamp(2.4rem,7vw,4.5rem)', lineHeight: 1, margin: '.3rem 0' }}>and</div>
+          <h1 className="name-display" style={{ fontSize: 'clamp(3.4rem,13vw,8.5rem)' }}>TONY</h1>
+
+          <div className="mx-auto" style={{ maxWidth: '380px', padding: '1.6rem 0', margin: '2.6rem auto 0', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)' }}>
+            <p className="f-cinzel ink tr2" style={{ fontSize: 'clamp(.78rem,2vw,1rem)' }}>SATURDAY · OCTOBER 10 · 2026</p>
+          </div>
+
+          <p className="f-cormorant" style={{ fontSize: 'clamp(.95rem,2.3vw,1.2rem)', maxWidth: '480px', margin: '2rem auto 0', color: 'var(--body)' }}>
+            With joyful hearts, Sheela &amp; Saji Francis invite you to share in this celebration of love and grace.
+          </p>
+
+          <a href="/invitation.pdf" download className="btn btn-ghost" style={{ marginTop: '2.4rem' }}>
+            <Download className="w-4 h-4" /> Download Invitation
+          </a>
         </div>
 
-        <a className="button button-quiet" href={INVITATION_FILE} download>
-          <Download size={15} />
-          Invitation
-        </a>
-      </nav>
+        <button onClick={() => scrollToId('countdown')} className="nudge" aria-label="Scroll down"
+          style={{ position: 'absolute', bottom: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.6rem', background: 'none', border: 'none', cursor: 'pointer' }}>
+          <span className="vert f-mont fs-9 tr3 muted">SCROLL</span>
+          <ChevronDown className="w-5 h-5" style={{ color: 'var(--gold)' }} />
+        </button>
+      </section>
 
-      <main>
-        <section id="hero" className="hero">
-          <div className="hero-inner reveal">
-            <p className="eyebrow">Betrothal Invitation</p>
-
-            <p className="verse">
-              “The Lord has done great things for us, and we are filled with joy.”
-              <span className="verse-ref">Psalm 126:3</span>
-            </p>
-
-            <h1 className="names">
-              Cera
-              <span className="ampersand">&amp;</span>
-              Tony
-            </h1>
-
-            <div className="hero-summary" aria-label="Event summary">
-              <div className="summary-item">
-                <CalendarDays size={17} />
-                Saturday, October 10, 2026
+      {/* ---- Countdown ---- */}
+      <section id="countdown" className="cream2-bg" style={{ padding: '7rem 1.5rem', borderTop: '1px solid var(--line)' }}>
+        <div className="reveal" style={{ maxWidth: '780px', margin: '0 auto', textAlign: 'center' }}>
+          <p className="eyebrow" style={{ marginBottom: '3rem' }}>Counting Down to Forever</p>
+          <div className="grid grid-cols-4" style={{ gap: '1rem' }}>
+            {Object.entries(timeLeft).map(([unit, value]) => (
+              <div key={unit} className="white-bg shadow-softer" style={{ border: '1px solid var(--line)', padding: '1.6rem .5rem' }}>
+                <span className="f-cinzel ink" style={{ display: 'block', fontSize: 'clamp(1.8rem,6vw,3.2rem)', fontWeight: 500 }}>
+                  {String(value).padStart(2, '0')}
+                </span>
+                <span className="f-mont fs-10 tr2 muted" style={{ display: 'block', textTransform: 'uppercase', marginTop: '.4rem' }}>{unit}</span>
               </div>
-              <div className="summary-item">
-                <Clock size={17} />
-                11:00 AM Ceremony
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ---- The Couple ---- */}
+      <section id="couple" style={{ padding: '8rem 1.5rem' }}>
+        <div style={{ maxWidth: '1040px', margin: '0 auto' }}>
+          <div className="reveal" style={{ textAlign: 'center', marginBottom: '4.5rem' }}>
+            <p className="eyebrow">Two Families, One Joy</p>
+            <h2 className="s-title" style={{ fontSize: 'clamp(1.8rem,5vw,2.8rem)', marginTop: '1rem' }}>The Happy Couple</h2>
+            <div className="rule" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: '2.5rem' }}>
+            {/* Cera */}
+            <div className="person reveal">
+              <div style={{ textAlign: 'center' }}>
+                <span className="f-vibes gold" style={{ fontSize: '2rem', display: 'block' }}>Our Beloved Daughter</span>
+                <h3 className="f-cinzel ink tr2" style={{ fontSize: '2rem', margin: '.4rem 0' }}>CERA</h3>
+                <span className="f-mont fs-11 tr2 muted" style={{ textTransform: 'uppercase' }}>D/o Sheela &amp; Saji Francis</span>
+                <div style={{ width: '40px', height: '1px', background: 'var(--gold-soft)', margin: '1.4rem auto' }} />
               </div>
-              <div className="summary-item">
-                <MapPin size={17} />
-                St. Mary&apos;s Forane Church
-              </div>
-              <div className="summary-item">
-                <Sparkles size={17} />
-                Kanjoor, Kerala
+              <p className="f-cormorant" style={{ fontStyle: 'italic', textAlign: 'center', fontSize: '1.05rem', color: 'var(--body)', lineHeight: 1.6 }}>
+                Generations of family heritage and grace, gathered into the joy of our bride-to-be.
+              </p>
+              <div className="ancestry fs-11" style={{ marginTop: '1.6rem', padding: '1.2rem', textAlign: 'center', lineHeight: 1.7 }}>
+                <span className="f-cinzel gold fs-10 tr2" style={{ display: 'block', textTransform: 'uppercase', marginBottom: '.6rem' }}>Granddaughter of</span>
+                <p>The late Brijit &amp; P.K. Francis<br /><span className="muted f-cormorant" style={{ fontStyle: 'italic' }}>Paracka House, Kanjoor</span></p>
+                <p className="gold" style={{ margin: '.5rem 0' }}>&amp;</p>
+                <p>The late Ally &amp; T.A. Mathan<br /><span className="muted f-cormorant" style={{ fontStyle: 'italic' }}>Thekkekkara House, Irinjalakuda</span></p>
               </div>
             </div>
 
-            <div className="hero-actions">
-              <a className="button button-primary" href={INVITATION_FILE} download>
-                <Download size={17} />
-                Download Invitation
-              </a>
+            {/* Tony */}
+            <div className="person reveal" style={{ transitionDelay: '.12s' }}>
+              <div style={{ textAlign: 'center' }}>
+                <span className="f-vibes gold" style={{ fontSize: '2rem', display: 'block' }}>Our Beloved Son</span>
+                <h3 className="f-cinzel ink tr2" style={{ fontSize: '2rem', margin: '.4rem 0' }}>TONY</h3>
+                <span className="f-mont fs-11 tr2 muted" style={{ textTransform: 'uppercase' }}>S/o Mini &amp; Anto Antony</span>
+                <div style={{ width: '40px', height: '1px', background: 'var(--gold-soft)', margin: '1.4rem auto' }} />
+              </div>
+              <p className="f-cormorant" style={{ fontStyle: 'italic', textAlign: 'center', fontSize: '1.05rem', color: 'var(--body)', lineHeight: 1.6 }}>
+                Raised among strong pillars of heritage, holding the true value of family and love.
+              </p>
+              <div className="ancestry fs-11" style={{ marginTop: '1.6rem', padding: '1.2rem', textAlign: 'center', lineHeight: 1.7 }}>
+                <span className="f-cinzel gold fs-10 tr2" style={{ display: 'block', textTransform: 'uppercase', marginBottom: '.6rem' }}>Grandson of</span>
+                <p>The late Chinnamma &amp; C.M. Antony<br /><span className="muted f-cormorant" style={{ fontStyle: 'italic' }}>Chackenkulam House, Pala</span></p>
+                <p className="gold" style={{ margin: '.5rem 0' }}>&amp;</p>
+                <p>The late Chinnamma &amp; T.J. Joseph<br /><span className="muted f-cormorant" style={{ fontStyle: 'italic' }}>Thekkumthottam House, Ponkunnam</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-              <a
-                className="button button-secondary"
-                href={CEREMONY_MAP}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <MapPin size={17} />
-                View Directions
-              </a>
+      {/* ---- Ceremonies (split narrative) ---- */}
+      <section id="ceremonies" className="cream2-bg" style={{ padding: '8rem 1.5rem', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)' }}>
+        <div style={{ maxWidth: '1040px', margin: '0 auto' }}>
+          <div className="reveal" style={{ textAlign: 'center', marginBottom: '4.5rem' }}>
+            <p className="eyebrow">Sacred Ceremonies</p>
+            <h2 className="s-title" style={{ fontSize: 'clamp(1.8rem,5vw,2.8rem)', marginTop: '1rem' }}>The Order of the Day</h2>
+            <div className="rule" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: '2.5rem' }}>
+            {ceremonies.map((c, i) => (
+              <div key={c.idx} className="chapter reveal" style={{ transitionDelay: `${i * 0.12}s` }}>
+                <div className="flex items-start justify-between" style={{ marginBottom: '1.6rem' }}>
+                  <span className="chapter-num">{c.idx}</span>
+                  <div className="flex items-center gold" style={{ gap: '.5rem' }}>
+                    <Clock className="w-4 h-4" />
+                    <span className="f-cinzel" style={{ fontSize: '1.1rem', fontWeight: 500, letterSpacing: '.08em' }}>{c.time}</span>
+                  </div>
+                </div>
+
+                <span className="f-mont fs-10 tr2 gold" style={{ textTransform: 'uppercase' }}>{c.tag}</span>
+                <h3 className="f-cinzel ink" style={{ fontSize: '1.65rem', letterSpacing: '.06em', margin: '.5rem 0 1.4rem' }}>{c.title}</h3>
+
+                <div className="hairline" style={{ width: '46px', marginBottom: '1.4rem' }} />
+
+                <p className="f-cinzel ink" style={{ fontSize: '1.1rem', fontWeight: 500 }}>{c.venue}</p>
+                <p className="f-mont fs-11 tr1 muted" style={{ textTransform: 'uppercase', margin: '.4rem 0 1rem' }}>{c.place}</p>
+                <p className="f-cormorant" style={{ fontSize: '1.05rem', color: 'var(--body)', lineHeight: 1.65, marginBottom: '1.8rem' }}>{c.note}</p>
+
+                <a href={c.map} target="_blank" rel="noopener noreferrer" className="map-link">
+                  <MapPin className="w-4 h-4" />
+                  <span>View directions</span>
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ---- RSVP ----
+      <section id="rsvp" style={{ padding: '8rem 1.5rem' }}>
+        <div style={{ maxWidth: '720px', margin: '0 auto' }}>
+          <div className="reveal" style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
+            <p className="eyebrow">Be Part of Our Day</p>
+            <h2 className="s-title" style={{ fontSize: 'clamp(1.8rem,5vw,2.8rem)', marginTop: '1rem' }}>Confirm Your Attendance</h2>
+            <p className="f-cormorant" style={{ fontStyle: 'italic', fontSize: '1.05rem', marginTop: '1rem', color: 'var(--body)' }}>
+              Kindly respond before the 1st of October, 2026.
+            </p>
+            <div className="rule" />
+          </div>
+
+          <div className="white-bg shadow-soft reveal" style={{ border: '1px solid var(--line)', padding: 'clamp(1.8rem,5vw,3rem)' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: '1.8rem' }}>
+              <div className="lux-field">
+                <input id="rsvp-name" type="text" placeholder=" " value={rsvpName} onChange={(e) => setRsvpName(e.target.value)} />
+                <span className="lux-underline" />
+                <label htmlFor="rsvp-name">Your full name</label>
+              </div>
+              <div style={{ paddingTop: '1.15rem', marginTop: '.4rem' }}>
+                <label className="field-label" htmlFor="rsvp-guests" style={{ display: 'block', marginBottom: '.6rem' }}>Number of guests</label>
+                <select id="rsvp-guests" className="lux-select" value={rsvpGuests} onChange={(e) => setRsvpGuests(e.target.value)}>
+                  <option value="1">1 · Individual</option>
+                  <option value="2">2 · Couple</option>
+                  <option value="3">3 · Family of three</option>
+                  <option value="4">4 · Family of four</option>
+                  <option value="5">5+ · Large family</option>
+                </select>
+              </div>
             </div>
 
-            <p className="invited-by">
-              With joyful hearts, Sheela &amp; Saji Francis invite you to share in this
-              celebration of love, prayer, and family.
-            </p>
+            <div style={{ marginTop: '2.2rem' }}>
+              <label className="field-label" style={{ display: 'block', marginBottom: '.9rem' }}>Will you join us?</label>
+              <div className="grid grid-cols-2" style={{ gap: '1rem' }}>
+                <div className={`radio-tile ${rsvpStatus === 'attending' ? 'active' : ''}`} onClick={() => setRsvpStatus('attending')}>
+                  Joyfully attending
+                </div>
+                <div className={`radio-tile ${rsvpStatus === 'declined' ? 'active' : ''}`} onClick={() => setRsvpStatus('declined')}>
+                  Regretfully decline
+                </div>
+              </div>
+            </div>
 
-            <button className="scroll-cue" type="button" onClick={() => scrollToId('countdown')}>
-              Scroll
-              <ChevronDown size={15} />
+            <div className="lux-field" style={{ marginTop: '1.4rem' }}>
+              <textarea id="rsvp-note" rows="3" placeholder=" " value={rsvpNote} onChange={(e) => setRsvpNote(e.target.value)} />
+              <span className="lux-underline" />
+              <label htmlFor="rsvp-note">A note or dietary preference (optional)</label>
+            </div>
+
+            <button className="btn btn-gold btn-block" style={{ marginTop: '2.4rem' }} onClick={handleRsvpSubmit} disabled={isRsvpSubmitting}>
+              {isRsvpSubmitting ? (
+                <><CheckCircle className="w-4 h-4" /> Confirming your place…</>
+              ) : (
+                <><Send className="w-4 h-4" /> Send RSVP</>
+              )}
             </button>
           </div>
-        </section>
+        </div>
+      </section>
+      */}
 
-        <section id="countdown" className="countdown">
-          <div className="container-narrow reveal" style={{ textAlign: 'center' }}>
-            <p className="eyebrow">Counting down</p>
-
-            <div className="countdown-grid">
-              {Object.entries(timeLeft).map(([unit, value]) => (
-                <div className="countdown-box" key={unit}>
-                  <span className="countdown-number">{String(value).padStart(2, '0')}</span>
-                  <span className="countdown-label">{unit}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section id="couple" className="section">
-          <div className="container">
-            <div className="reveal" style={{ textAlign: 'center' }}>
-              <p className="eyebrow">The couple and families</p>
-              <h2 className="section-title">Two Families, One Joy</h2>
-              <div className="rule" />
-            </div>
-
-            <div className="family-grid">
-              <article className="family-card card reveal">
-                <span className="family-role">Bride-to-be</span>
-                <h3 className="family-name">Cera</h3>
-                <p className="family-line">D/o Sheela &amp; Saji Francis</p>
-
-                <div className="ancestry">
-                  <strong className="gold">Granddaughter of</strong>
-                  <br />
-                  The late Brijit Francis and the late P.K. Francis
-                  <br />
-                  <span className="muted">Paracka House, Kanjoor</span>
-                  <br />
-                  <br />
-                  The late Ally Mathan and the late T.A. Mathan
-                  <br />
-                  <span className="muted">Thekkekkara House, Irinjalakuda</span>
-                </div>
-              </article>
-
-              <article className="family-card card reveal">
-                <span className="family-role">Groom-to-be</span>
-                <h3 className="family-name">Tony</h3>
-                <p className="family-line">S/o Mini Anto &amp; Anto Antony</p>
-
-                <div className="ancestry">
-                  <strong className="gold">Family House</strong>
-                  <br />
-                  Chakkankulam House
-                  <br />
-                  <span className="muted">Pala, Kerala</span>
-                </div>
-              </article>
-            </div>
-          </div>
-        </section>
-
-        <section id="ceremony" className="section" style={{ background: 'rgba(247, 240, 230, 0.62)' }}>
-          <div className="container">
-            <div className="reveal" style={{ textAlign: 'center' }}>
-              <p className="eyebrow">Ceremony details</p>
-              <h2 className="section-title">Order of the Day</h2>
-              <p className="section-copy">
-                The day begins with the betrothal ceremony at church, followed by the
-                reception and lunch with family and guests.
+      {/* ---- Blessings ---- */}
+      <section id="blessings" className="cream2-bg" style={{ padding: '8rem 1.5rem', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)' }}>
+        <div style={{ maxWidth: '1040px', margin: '0 auto' }}>
+          <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: '3.5rem', alignItems: 'start' }}>
+            {/* Form */}
+            <div className="reveal">
+              <p className="eyebrow">To the beautiful couple-to-be</p>
+              <h2 className="s-title" style={{ fontSize: 'clamp(1.7rem,5vw,2.6rem)', marginTop: '1rem' }}>For them to treasure</h2>
+              <div className="hairline" style={{ width: '54px', margin: '1.4rem 0' }} />
+              <p className="f-cormorant" style={{ fontSize: '1.1rem', lineHeight: 1.65, color: 'var(--body)', marginBottom: '2rem' }}>
+                Near or far, leave a heartfelt wish below.
               </p>
-              <div className="rule" />
-            </div>
 
-            <div className="events-grid">
-              {events.map((event) => (
-                <article className="event-card card reveal" key={event.label}>
-                  <div className="event-top">
-                    <h3 className="event-label">{event.label}</h3>
-                    <span className="event-time">
-                      <Clock size={15} />
-                      {event.time}
-                    </span>
-                  </div>
-
-                  <p className="venue">{event.venue}</p>
-                  <p className="place">{event.place}</p>
-                  <p className="event-note">{event.note}</p>
-
-                  <a
-                    className="text-link"
-                    href={event.map}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    View directions
-                    <ArrowUpRight size={14} />
-                  </a>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section id="directions" className="section">
-          <div className="container">
-            <div className="reveal" style={{ textAlign: 'center' }}>
-              <p className="eyebrow">Directions and contact</p>
-              <h2 className="section-title">Guest Information</h2>
-              <p className="section-copy">
-                Save the invitation, open the map links directly from your phone, or call
-                the family for any guidance.
-              </p>
-              <div className="rule" />
-            </div>
-
-            <div className="directions-panel">
-              <div className="contact-box card reveal">
-                <MapPin className="gold" size={22} />
-                <h3 className="event-label" style={{ marginTop: '0.8rem' }}>
-                  Venue directions
-                </h3>
-                <p className="event-note">
-                  Open the exact Google Maps location before you start your journey.
-                </p>
-
-                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.75rem' }}>
-                  <a
-                    className="button button-secondary"
-                    href={CEREMONY_MAP}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Church
-                  </a>
-                  <a
-                    className="button button-secondary"
-                    href={RECEPTION_MAP}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Reception
-                  </a>
+              <div className="white-bg shadow-softer" style={{ border: '1px solid var(--line)', padding: '1.8rem' }}>
+                <div className="lux-field">
+                  <input id="bless-name" type="text" placeholder=" " value={blessingName} onChange={(e) => setBlessingName(e.target.value)} />
+                  <span className="lux-underline" />
+                  <label htmlFor="bless-name">Your name</label>
                 </div>
-              </div>
-
-              <div className="contact-box card reveal">
-                <Phone className="gold" size={22} />
-                <h3 className="event-label" style={{ marginTop: '0.8rem' }}>
-                  Contact
-                </h3>
-                <p className="event-note">
-                  For family inquiries, travel coordination, or assistance, please reach
-                  us directly.
-                </p>
-
-                <div className="phone-row">
-                  <strong className="font-display ink">{DISPLAY_PHONE}</strong>
-                  <button className="copy-button" type="button" onClick={copyPhoneNumber}>
-                    <Copy size={13} />
-                    {showCopied ? 'Copied' : 'Copy'}
-                  </button>
+                <div className="lux-field" style={{ marginTop: '1rem' }}>
+                  <textarea id="bless-msg" rows="4" placeholder=" " value={blessingMessage} onChange={(e) => setBlessingMessage(e.target.value)} />
+                  <span className="lux-underline" />
+                  <label htmlFor="bless-msg">Your blessing or message</label>
                 </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="blessings" className="section" style={{ background: 'rgba(247, 240, 230, 0.62)' }}>
-          <div className="container">
-            <div className="reveal" style={{ textAlign: 'center' }}>
-              <p className="eyebrow">Blessings and wishes</p>
-              <h2 className="section-title">Leave a Blessing</h2>
-              <p className="section-copy">
-                This is a temporary on-page guestbook. Messages are kept only in this
-                browser session and are not saved to a backend.
-              </p>
-              <div className="rule" />
-            </div>
-
-            <div className="blessings-layout">
-              <div className="form-card card reveal">
-                <label className="field" htmlFor="blessing-name">
-                  <span>Your name</span>
-                  <input
-                    id="blessing-name"
-                    type="text"
-                    value={blessingName}
-                    onChange={(event) => setBlessingName(event.target.value)}
-                    autoComplete="name"
-                  />
-                </label>
-
-                <label className="field" htmlFor="blessing-message">
-                  <span>Your blessing</span>
-                  <textarea
-                    id="blessing-message"
-                    rows="4"
-                    value={blessingMessage}
-                    onChange={(event) => setBlessingMessage(event.target.value)}
-                  />
-                </label>
-
-                <button className="button button-primary" type="button" onClick={handleBlessingSubmit}>
-                  <Heart size={16} />
-                  Post Blessing
+                <button className="btn btn-gold btn-block" style={{ marginTop: '1.8rem' }} onClick={handleBlessingSubmit}>
+                  <Sparkles className="w-4 h-4" /> Post blessing
                 </button>
               </div>
+            </div>
 
-              <div className="blessings-card card reveal">
-                <p className="guestbook-note">
-                  Recent wishes shown below are frontend-only and reset when the page reloads.
-                </p>
-
-                <div className="blessings-list">
-                  {blessingsList.map((blessing, index) => (
-                    <article className="blessing" key={`${blessing.name}-${index}`}>
-                      <div className="blessing-head">
-                        <span className="blessing-name">{blessing.name}</span>
-                        <span className="blessing-date">{blessing.date}</span>
+            {/* List */}
+            <div className="reveal" style={{ transitionDelay: '.12s' }}>
+              <div className="white-bg shadow-soft" style={{ border: '1px solid var(--line)', padding: '1.6rem' }}>
+                <div className="flex items-center justify-between" style={{ borderBottom: '1px solid var(--line)', paddingBottom: '1rem', marginBottom: '1.2rem' }}>
+                  <span className="f-cinzel fs-11 tr2 muted" style={{ textTransform: 'uppercase' }}>Recent blessings</span>
+                  <span className="f-mont fs-9 tr1 gold cream2-bg" style={{ padding: '.35rem .7rem', textTransform: 'uppercase' }}>
+                    {blessingsList.length} wishes
+                  </span>
+                </div>
+                <div className="blessing-scroll" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {blessingsList.map((b, i) => (
+                    <div key={i} className="blessing-card">
+                      <Heart className="w-12 h-12" style={{ position: 'absolute', right: '.8rem', top: '.8rem', color: 'rgba(197,168,128,.10)' }} />
+                      <div className="flex items-center justify-between" style={{ marginBottom: '.5rem' }}>
+                        <span className="f-cinzel gold fs-12" style={{ fontWeight: 500 }}>{b.name}</span>
+                        <span className="f-mont fs-9 muted">{b.date}</span>
                       </div>
-                      <p className="blessing-text">“{blessing.text}”</p>
-                    </article>
+                      <p className="f-cormorant" style={{ fontStyle: 'italic', fontSize: '1.02rem', color: 'var(--body)', lineHeight: 1.6 }}>“{b.text}”</p>
+                    </div>
                   ))}
                 </div>
               </div>
             </div>
           </div>
-        </section>
-
-        <section id="support" className="section">
-          <div className="container-narrow reveal" style={{ textAlign: 'center' }}>
-            <p className="eyebrow">With blessings and prayers</p>
-            <h2 className="section-title">Sharing the Happiness</h2>
-            <div className="rule" />
-
-            <div className="support-grid">
-              {[
-                ['Fr. Francis SJ', 'Blessings'],
-                ['Mathews & Merin', 'Family'],
-                ['Bastin & Riya', 'Family'],
-                ['Austin', 'Family'],
-              ].map(([name, role]) => (
-                <div className="support-chip" key={name}>
-                  <strong>{name}</strong>
-                  <span>{role}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      </main>
-
-      <footer className="footer">
-        <p className="footer-name">Cera &amp; Tony</p>
-
-        <div className="footer-links">
-          <button className="nav-link" type="button" onClick={() => scrollToId('hero')}>
-            Home
-          </button>
-          <button className="nav-link" type="button" onClick={() => scrollToId('ceremony')}>
-            Ceremony
-          </button>
-          <button className="nav-link" type="button" onClick={() => scrollToId('directions')}>
-            Directions
-          </button>
-          <a className="nav-link" href={INVITATION_FILE} download style={{ textDecoration: 'none' }}>
-            Download
-          </a>
         </div>
+      </section>
 
-        <p className="copyright">© 2026 Cera &amp; Tony · Betrothal Invitation</p>
+      {/* ---- Family & Contact ---- */}
+      <section style={{ padding: '8rem 1.5rem' }}>
+        <div className="reveal" style={{ maxWidth: '880px', margin: '0 auto', textAlign: 'center' }}>
+          <p className="eyebrow" style={{ marginBottom: '.8rem' }}>With Blessings &amp; Prayers</p>
+          <Sparkles className="w-5 h-5 spin-slow" style={{ color: 'var(--gold)', margin: '0 auto 2.5rem' }} />
+
+          <div className="grid grid-cols-2 md:grid-cols-4" style={{ gap: '1.2rem', maxWidth: '640px', margin: '0 auto' }}>
+            {[
+              { n: 'Fr. Francis SJ', r: 'Priest & Guardian' },
+              { n: 'Mathews & Merin', r: 'Sponsoring Couple' },
+              { n: 'Bastin & Riya', r: 'Sponsoring Couple' },
+              { n: 'Austin', r: 'Brother of the Bride' },
+            ].map((p) => (
+              <div key={p.n} className="family-chip">
+                <span className="f-cinzel gold fs-12" style={{ display: 'block', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '.3rem' }}>{p.n}</span>
+                <span className="f-mont fs-9 tr1 muted">{p.r}</span>
+              </div>
+            ))}
+          </div>
+
+          <p className="f-cormorant" style={{ fontStyle: 'italic', fontSize: '1.05rem', color: 'var(--body)', margin: '3rem 0 1.4rem' }}>
+            For any family inquiries, please reach us directly.
+          </p>
+
+          <div className="contact-pill">
+            <span className="flex items-center gold" style={{ gap: '.5rem' }}>
+              <Phone className="w-4 h-4" />
+              <span className="f-cinzel" style={{ fontWeight: 500, letterSpacing: '.06em' }}>+91 98474 00241</span>
+            </span>
+            <button onClick={copyPhoneNumber} className="flex items-center" style={{ gap: '.35rem', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gold-d)' }}>
+              <Copy className="w-3.5 h-3.5" />
+              <span className="f-mont fs-9 tr1" style={{ textTransform: 'uppercase' }}>{showCopied ? 'Copied' : 'Copy'}</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ---- Travel & Stay ---- */}
+      <section className="cream2-bg" style={{ padding: '6rem 1.5rem', borderTop: '1px solid var(--line)' }}>
+        <div className="reveal" style={{ maxWidth: '560px', margin: '0 auto', textAlign: 'center' }}>
+          <p className="eyebrow" style={{ marginBottom: '1rem' }}>For Our Guests Travelling</p>
+          <h2 className="s-title" style={{ fontSize: 'clamp(1.5rem,4vw,2rem)' }}>Travel &amp; Stay</h2>
+          <div className="rule" />
+          <p className="f-cormorant" style={{ fontStyle: 'italic', fontSize: '1.05rem', lineHeight: 1.7, color: 'var(--body)', margin: '1.6rem 0' }}>
+            For those journeying from afar, comfortable stays are available near both venues in Kanjoor and Kaippattoor. Do reach out and we'll gladly help arrange accommodation.
+          </p>
+          <button onClick={copyPhoneNumber} className="map-link" style={{ background: 'none', border: 'none', borderBottom: '1px solid var(--line)', padding: '0 0 4px', cursor: 'pointer' }}>
+            <Phone className="w-4 h-4" />
+            <span>{showCopied ? 'Copied' : '+91 98474 00241'}</span>
+          </button>
+        </div>
+      </section>
+
+      {/* ---- Footer ---- */}
+      <footer className="cream2-bg" style={{ padding: '4rem 1.5rem', borderTop: '1px solid var(--line)', textAlign: 'center' }}>
+        <div style={{ maxWidth: '880px', margin: '0 auto' }}>
+          <p className="f-vibes gold" style={{ fontSize: '2.4rem' }}>Cera &amp; Tony</p>
+          <div className="divider" style={{ width: '120px', margin: '1.2rem auto' }} />
+          <div className="flex justify-center flex-wrap" style={{ gap: '1.4rem', marginBottom: '1.6rem' }}>
+            <span className="nav-link" onClick={() => scrollToId('couple')}>The Couple</span>
+            <span className="nav-link" onClick={() => scrollToId('ceremonies')}>Ceremonies</span>
+            <span className="nav-link" onClick={() => scrollToId('rsvp')}>RSVP</span>
+          </div>
+          <p className="f-mont fs-9 tr2 muted" style={{ textTransform: 'uppercase' }}>© 2026 Cera &amp; Tony · A Digital Heirloom</p>
+        </div>
       </footer>
 
+      {/* ---- Toast ---- */}
       <div className={`toast ${toast.show ? 'show' : ''}`} role="status" aria-live="polite">
-        <CheckCircle className="gold" size={19} style={{ flexShrink: 0, marginTop: 2 }} />
-
-        <div>
-          <p className="toast-title">{toast.title}</p>
-          <p className="toast-message">{toast.message}</p>
+        <CheckCircle className="w-5 h-5" style={{ color: 'var(--gold)', flexShrink: 0, marginTop: '2px' }} />
+        <div style={{ flex: 1 }}>
+          <p className="f-cinzel ink fs-12 tr1" style={{ textTransform: 'uppercase', fontWeight: 500, marginBottom: '.25rem' }}>{toast.title}</p>
+          <p className="f-cormorant" style={{ fontSize: '.98rem', color: 'var(--body)', lineHeight: 1.5 }}>{toast.message}</p>
         </div>
-
-        <button
-          className="toast-close"
-          type="button"
-          aria-label="Dismiss notification"
-          onClick={() => setToast((current) => ({ ...current, show: false }))}
-        >
-          <X size={16} />
+        <button onClick={() => setToast((t) => ({ ...t, show: false }))} aria-label="Dismiss"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', flexShrink: 0 }}>
+          <X className="w-4 h-4" />
         </button>
       </div>
     </div>
